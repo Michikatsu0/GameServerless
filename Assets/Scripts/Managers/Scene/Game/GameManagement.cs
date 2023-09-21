@@ -1,18 +1,21 @@
+using Firebase.Auth;
+using Firebase.Database;
+using Firebase.Extensions;
+using System;
 using System.Collections;
+
 using System.Collections.Generic;
 using UnityEngine;
 
 public class GameManagement : MonoBehaviour
 {
-    // Start is called before the first frame update
+    int score;
+
     void Start()
     {
         UIElementsManager.Instance.DisableUI();
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
+
+    
 }

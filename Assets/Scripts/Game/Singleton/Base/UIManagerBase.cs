@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -11,6 +12,9 @@ public abstract class UIManagerBase : MonoBehaviour
     private Text
         scoreLabel,
         timeLabel;
+
+    
+    [SerializeField] private TMP_Text scoreText;
 
     [SerializeField]
     private GameObject gameOverPanel;

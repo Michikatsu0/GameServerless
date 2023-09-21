@@ -4,8 +4,8 @@ public abstract class PlayerControllerBase : MonoBehaviour
 {
     [Header("Movement params")]
     [SerializeField]
-    [Range(20F, 50F)]
-    private float speed = 20F;
+    [Range(1F, 30F)]
+    private float speed = 10F;
 
     [Header("Shoot params")]
     [SerializeField]
@@ -18,12 +18,17 @@ public abstract class PlayerControllerBase : MonoBehaviour
     [Range(0F, 500F)]
     protected float shootForce = 250F;
 
+    [SerializeField]
+    protected FixedJoystick joystick;
     private float
         hVal = 0F,
         minXPos,
         maxXPos,
         defaultYPos,
         validXPos;
+
+    private bool buttonShot = false, changeButton = false;
+    private int currentBulllet = 0;
 
     private Vector2 moveDirection;
 
@@ -57,7 +62,7 @@ public abstract class PlayerControllerBase : MonoBehaviour
     // Update is called once per frame
     private void Update()
     {
-        hVal = Input.GetAxis("Horizontal");
+        hVal = joystick.Horizontal;
         moveDirection = (new Vector2(hVal, 0).normalized) * speed * Time.deltaTime;
         validXPos = Mathf.Clamp(transform.position.x + moveDirection.x, minXPos, maxXPos);
 
@@ -66,10 +71,23 @@ public abstract class PlayerControllerBase : MonoBehaviour
         ProcessShooting();
     }
 
+    public void ShotButton()
+    {
+        buttonShot = true;
+    }
+    public void ChangeButton()
+    {
+        changeButton = true;
+        currentBulllet++;
+        if (currentBulllet >= 3)
+            currentBulllet = 0;
+    }
+
     private void ProcessShooting()
     {
-        if (Input.GetButtonDown("Fire1"))
+        if (buttonShot)
         {
+            buttonShot = false;
             //Fire
             if (NoSelectedBullet)
             {
@@ -82,19 +100,9 @@ public abstract class PlayerControllerBase : MonoBehaviour
             }
         }
 
-        if (Input.GetKeyDown(KeyCode.Alpha1))
+        if (changeButton)
         {
-            SelectBullet(0);
-        }
-
-        if (Input.GetKeyDown(KeyCode.Alpha2))
-        {
-            SelectBullet(1);
-        }
-
-        if (Input.GetKeyDown(KeyCode.Alpha3))
-        {
-            SelectBullet(2);
+            SelectBullet(currentBulllet);
         }
     }
 }

@@ -160,15 +160,14 @@ public class AuthenticationManager : MonoBehaviour
         else
         {
             AuthResult result = registerTask.Result;
-
-            GetUsername(auth);
             SceneManagement.Instance.ChangeScene((int)AppScene.HOME);
         }
 
     }
 
-    private void GetUsername(FirebaseAuth auth)
+    public void GetUsername(FirebaseAuth auth)
     {
+        string username = "";
         FirebaseDatabase.DefaultInstance
         .GetReference("users/" + auth.CurrentUser.UserId + "/username")
         .GetValueAsync().ContinueWithOnMainThread(task => {
@@ -182,10 +181,12 @@ public class AuthenticationManager : MonoBehaviour
                 snapshot.Value,
                 auth.CurrentUser.Email,
                 auth.CurrentUser.UserId);
+
+                username = (string)snapshot.Value;
+
             }
         });
     }
-
 
     private IEnumerator RegisterUser(string email, string username, string password)
     {
