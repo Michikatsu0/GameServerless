@@ -50,7 +50,6 @@ public abstract class GameControllerBase : MonoBehaviour
             uRScoreLabel.text = "Your Score: " + PlayerController?.Score.ToString();
             var auth = FirebaseAuth.DefaultInstance;
             SetScore(auth);
-
         }
     }
 

@@ -21,15 +21,13 @@ public class AuthenticationManager : MonoBehaviour
     private Button loginButton;
     private Button signUpButton;
     private Button restoreButton;
-    private Button returnPasswordButton;
 
     private Coroutine loginCoroutine;
     private Coroutine signOutCoroutine;
     private Coroutine getUsernameCoroutine;
     private Coroutine restorePasswordCoroutine;
 
-    DatabaseReference database;
-    private string username;
+    DatabaseReference mDatabase;
 
     private void Awake()
     {
@@ -46,7 +44,7 @@ public class AuthenticationManager : MonoBehaviour
         loginButton.onClick.AddListener(HandleLoginButtonClicked);
         signUpButton.onClick.AddListener(HandleRegisterButtonClicked);
         restoreButton.onClick.AddListener(HandleRestoreButtonClicked);
-        database = FirebaseDatabase.DefaultInstance.RootReference;
+        mDatabase = FirebaseDatabase.DefaultInstance.RootReference;
         if (FirebaseAuth.DefaultInstance.CurrentUser != null)
             SceneManager.LoadScene((int)AppScene.HOME);
     }
@@ -240,8 +238,8 @@ public class AuthenticationManager : MonoBehaviour
                         result.User.UserId);
 
                 PlayerPrefs.SetString("UserID", result.User.UserId);
-                database.Child("users").Child(result.User.UserId).Child("score").SetValueAsync(0);
-                database.Child("users").Child(result.User.UserId).Child("username").SetValueAsync(username);
+                mDatabase.Child("users").Child(result.User.UserId).Child("score").SetValueAsync(0);
+                mDatabase.Child("users").Child(result.User.UserId).Child("username").SetValueAsync(username);
                 
 
                 SceneManagement.Instance.ChangeScene((int)AppScene.HOME);
@@ -262,7 +260,6 @@ public class AuthenticationManager : MonoBehaviour
 
     private bool ValidUsername(string username)
     {
-        this.username = username;
         if (String.IsNullOrEmpty(username))
         {
             DisableUIErrors();

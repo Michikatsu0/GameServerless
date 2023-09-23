@@ -19,7 +19,7 @@ public class ScoreManager : MonoBehaviour
     [SerializeField] private Button topScoreLabel;
     private DataUser[] dataUsers = new DataUser[5];
     private Dictionary<string, int> usersDic = new Dictionary<string, int>();
-    private int score;
+    [DoNotSerialize] public int score;
     private DatabaseReference mDatabase;
     private int iterations = 5;
 
@@ -40,41 +40,6 @@ public class ScoreManager : MonoBehaviour
     public void WriteNewScore(FirebaseAuth auth, int newScore)
     {
         mDatabase.Child("users").Child(auth.CurrentUser.UserId).Child("score").SetValueAsync(newScore);
-    }
-
-    void HandleLeaderboardValueChanged(object sender, ValueChangedEventArgs args)
-    {
-        if (args.DatabaseError != null)
-        {
-            Debug.LogError(args.DatabaseError.Message);
-            return;
-        }
-
-        if (args.Snapshot != null && args.Snapshot.ChildrenCount > 0)
-        {
-            Dictionary<string, int> leaderboardData = new Dictionary<string, int>();
-            int i = 0; // Índice para recorrer las listas de TextMeshProUGUI
-
-            foreach (var userDoc in (Dictionary<string, object>)args.Snapshot.Value)
-            {
-                var userObject = (Dictionary<string, object>)userDoc.Value;
-                if (userObject.ContainsKey("score"))
-                {
-                    string username = userObject["username"].ToString();
-                    int userScore = int.Parse(userObject["score"].ToString());
-                    leaderboardData.Add(username, userScore);
-
-                    // Actualiza los TextMeshProUGUI correspondientes en la UI
-                    if (i < usernameLabel.Length && i < scoresLabel.Length)
-                    {
-                        usernameLabel[i].text = username;
-                        scoresLabel[i].text = userScore.ToString();
-                        i++;
-                    }
-                }
-            }
-
-        }
     }
 
     private void GetScore(FirebaseAuth auth)
@@ -132,7 +97,7 @@ public class ScoreManager : MonoBehaviour
                         user.username = list_Users_Name[i];
                         user.score = list_Users_Score[i];
                         dataUsers[i] = user;
-                        usernameLabel[i].text = dataUsers[i].username;
+                        usernameLabel[i].text = (i + 1) + ". " + dataUsers[i].username;
                         scoresLabel[i].text = dataUsers[i].score.ToString();
 
                     }
