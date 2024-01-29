@@ -30,6 +30,16 @@ El sistema permite a los registrados con proveedor de email que puedan enviar al
 
 ![image](https://github.com/Michikatsu0/GameServerless/assets/68073260/15708d1e-d420-4c86-a6d5-df4c2fff2276)
 
+## Tabla de puntajes y Cerrar sesión de Usuais
+
+Se implemente un menu con acceso a tablas de puntaje de los scores mas altos en el juego y tambien para cerrar sesión de la cuenta actual (si entras como anonimo al cerrar sesion se borran todos los datos para no llenar el server de informacion residual o basura).
+
+![image](https://github.com/Michikatsu0/GameServerless/assets/68073260/ddb57163-3fab-47fc-bd73-85db71365a1a)
+
+Se implementa sistema de Score o tabla de puntaje para los jugadores en tiempo real, la tabla se actualiza al entrar en ella y esta se "descargada" de los datos que hayan en el apartado "score" del json de los jugadores en la base de datos y se organizan de mayor a menor usando como base un diccionario en el código.
+
+![image](https://github.com/Michikatsu0/GameServerless/assets/68073260/312906d0-e5ad-461a-adea-2f5d52358dc7)
+
 ## Iniciar sesión como invitado
 
 Se tiene implementado un sistema de inicio de sesión para anónimos que permite unirse al juego sin un registro convencional y de esa forma entrar más directamente a probar el juego. El sistema te registra con un Token al igual que con los registrados por proveedor de email, solo que al cerrar sesión estos datos son borrados de la base de datos.
