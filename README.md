@@ -34,5 +34,5 @@ El sistema permite a los registrados con proveedor de email que puedan enviar al
 
 Se tiene implementado un sistema de inicio de sesión para anónimos que permite unirse al juego sin un registro convencional y de esa forma entrar más directamente a probar el juego. El sistema te registra con un Token al igual que con los registrados por proveedor de email, solo que al cerrar sesión estos datos son borrados de la base de datos.
 
-![image](https://github.com/Michikatsu0/GameServerless/assets/68073260/0f326992-6af6-4e46-8e17-5926bd206aa0)
+![image](https://github.com/Michikatsu0/GameServerless/assets/68073260/da346549-735f-4228-903e-385b7759f298)
 
