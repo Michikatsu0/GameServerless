@@ -1,29 +1,32 @@
-using Firebase;
 using Firebase.Auth;
 using Firebase.Database;
 using Firebase.Extensions;
 using System;
 using System.Collections;
-using System.Collections.Generic;
+using System.Net.Mail;
+using System.Runtime.CompilerServices;
 using TMPro;
-using Unity.VisualScripting;
+using UnityEditor.PackageManager;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
-using UnityEngine.XR;
 
 public class AuthenticationManager : MonoBehaviour
 {
-    [SerializeField] private GameObject[] signUpErrorList;
-    [SerializeField] private GameObject[] loginErrorList;
-    [SerializeField] private GameObject[] restoreErrorList;
+    private GameObject errorUI;
+    
+    private TMP_Text tMPErrorUI;
+    private Image imageErrorUI;
+    private Color colorErrorUI;
 
     private Button loginButton;
     private Button signUpButton;
     private Button restoreButton;
-
+    private Button loginGuestButton;
+    
     private Coroutine loginCoroutine;
-    private Coroutine signOutCoroutine;
+    private Coroutine signInCoroutine;
+    private Coroutine loginGuestCoroutine;
     private Coroutine getUsernameCoroutine;
     private Coroutine restorePasswordCoroutine;
 
@@ -32,10 +35,15 @@ public class AuthenticationManager : MonoBehaviour
     private void Awake()
     {
         loginButton = GameObject.Find("Button_Login").GetComponent<Button>();
-        signUpButton = GameObject.Find("Button_SignUp").GetComponent<Button>();
+        signUpButton = GameObject.Find("Button_SignIn").GetComponent<Button>();
         restoreButton = GameObject.Find("Button_Restore").GetComponent<Button>();
-        DisableUIErrors();
+        loginGuestButton = GameObject.Find("Button_LoginGuest").GetComponent<Button>();
         
+        errorUI = GameObject.Find("Error_Window_UI");
+        errorUI.SetActive(false);
+
+        imageErrorUI = errorUI.GetComponent<Image>();
+        tMPErrorUI = errorUI.GetComponentInChildren<TMP_Text>();
     }
 
     void Start()
@@ -44,22 +52,10 @@ public class AuthenticationManager : MonoBehaviour
         loginButton.onClick.AddListener(HandleLoginButtonClicked);
         signUpButton.onClick.AddListener(HandleRegisterButtonClicked);
         restoreButton.onClick.AddListener(HandleRestoreButtonClicked);
+        loginGuestButton.onClick.AddListener(HandleLoginGuestButtonClicked);
         mDatabase = FirebaseDatabase.DefaultInstance.RootReference;
         if (FirebaseAuth.DefaultInstance.CurrentUser != null)
             SceneManager.LoadScene((int)AppScene.HOME);
-    }
-
-    public void DisableUIErrors()
-    {
-        foreach (var item in loginErrorList){
-            item.gameObject.SetActive(false);
-        }
-        foreach (var item in signUpErrorList){
-            item.gameObject.SetActive(false);
-        }
-        foreach ( var item in restoreErrorList) { 
-            item.gameObject.SetActive(false);
-        }
     }
 
     private void HandleRestoreButtonClicked()
@@ -74,7 +70,7 @@ public class AuthenticationManager : MonoBehaviour
         string email = GameObject.Find("InputField_Email").GetComponent<TMP_InputField>().text;
         string password = GameObject.Find("InputField_Password").GetComponent<TMP_InputField>().text;
 
-        loginCoroutine = StartCoroutine(LoginUser(email, password));
+        loginCoroutine = StartCoroutine(SignInUser(email, password));
     }
 
     private void HandleRegisterButtonClicked()
@@ -83,7 +79,32 @@ public class AuthenticationManager : MonoBehaviour
         string username = GameObject.Find("InputField_Username").GetComponent<TMP_InputField>().text;
         string password = GameObject.Find("InputField_Password").GetComponent<TMP_InputField>().text;
 
-        signOutCoroutine = StartCoroutine(RegisterUser(email, username, password));
+        signInCoroutine = StartCoroutine(RegisterUser(email, username, password));
+    }
+
+    private void HandleLoginGuestButtonClicked()
+    {
+        loginGuestCoroutine = StartCoroutine(SingInWithAnonymous());
+    }
+
+    private IEnumerator SingInWithAnonymous()
+    {
+        var auth = FirebaseAuth.DefaultInstance;
+        var registerTask = auth.SignInAnonymouslyAsync();
+
+        yield return new WaitUntil(() => registerTask.IsCompleted);
+
+        if (registerTask.IsCanceled)
+            Debug.LogError("SignInAnonymouslyAsync was canceled.");
+        else if (registerTask.IsFaulted)
+            Debug.LogError("SendPasswordResetEmailAsync encountered an error:" + registerTask.Exception);
+
+        AuthResult result = registerTask.Result;
+        PlayerPrefs.SetString("UserID", result.User.UserId);
+        mDatabase.Child("users").Child(result.User.UserId).Child("score").SetValueAsync(0);
+        mDatabase.Child("users").Child(result.User.UserId).Child("username").SetValueAsync("#" + UnityEngine.Random.Range(1000, 9999));
+        SceneManagement.Instance.ChangeScene((int)AppScene.HOME);
+        PlayerPrefs.Save();
     }
 
     private IEnumerator RestorePassword(string email)
@@ -92,68 +113,50 @@ public class AuthenticationManager : MonoBehaviour
         var restoreTask = auth.SendPasswordResetEmailAsync(email);
 
         yield return new WaitUntil(() => restoreTask.IsCompleted);
+
+        errorUI.SetActive(false);
+
         if (restoreTask.IsCanceled)
-            Debug.LogError("SignInWithEmailAndPasswordAsync was canceled.");
+            Debug.LogError("SendPasswordResetEmailAsync was canceled.");
         else if (restoreTask.IsFaulted)
         {
             Debug.LogError("SendPasswordResetEmailAsync encountered an error: " + restoreTask.Exception);
-
-            if (restoreTask.Exception.Message == "One or more errors occurred. (The email address is badly formatted.)")
-            {
-                DisableUIErrors();
-                restoreErrorList[0].gameObject.SetActive(true);
-            }
-            else if (restoreTask.Exception.Message == "One or more errors occurred. (An email address must be provided.)")
-            {
-                DisableUIErrors();
-                restoreErrorList[1].gameObject.SetActive(true);
-            }
-            else if (restoreTask.Exception.Message == "One or more errors occurred. (There is no user record corresponding to this identifier. The user may have been deleted.)")
-            {
-                DisableUIErrors();
-                restoreErrorList[2].SetActive(true);
-            }
+            errorUI.SetActive(true);
+            colorErrorUI = Color.HSVToRGB(0, 80, 100);
+            colorErrorUI.a = 0.9f;
+            imageErrorUI.color = colorErrorUI;
+            tMPErrorUI.text = restoreTask.Exception.Message;
         }
         else
         {
-            DisableUIErrors();
-            restoreErrorList[3].SetActive(true);
+            errorUI.SetActive(true);
+            Color colorErrorUI = Color.green;
+            colorErrorUI.a = 0.8f;
+            imageErrorUI.color = colorErrorUI;
+            tMPErrorUI.text = "Password reset email sent successfully.";
             Debug.Log("Password reset email sent successfully.");
         }
     }
 
-    private IEnumerator LoginUser(string email, string password)
+    private IEnumerator SignInUser(string email, string password)
     {
         var auth = FirebaseAuth.DefaultInstance;
         var registerTask = auth.SignInWithEmailAndPasswordAsync(email, password);
 
         yield return new WaitUntil(() => registerTask.IsCompleted);
+
+        errorUI.SetActive(false);
+
         if (registerTask.IsCanceled)
             Debug.LogError("SignInWithEmailAndPasswordAsync was canceled.");
         else if (registerTask.IsFaulted)
         {
             Debug.LogError("SignInWithEmailAndPasswordAsync encountered an error: " + registerTask.Exception.Message);
-
-            if (registerTask.Exception.Message == "One or more errors occurred. (The email address is badly formatted.)")
-            {
-                DisableUIErrors();
-                loginErrorList[1].gameObject.SetActive(true);
-            }
-            else if (registerTask.Exception.Message == "One or more errors occurred. (An email address must be provided.)")
-            {
-                DisableUIErrors();
-                loginErrorList[2].gameObject.SetActive(true);
-            }
-            else if (registerTask.Exception.Message == "One or more errors occurred. (A password must be provided.)")
-            {
-                DisableUIErrors();
-                loginErrorList[3].gameObject.SetActive(true);
-            }
-            else
-            {
-                DisableUIErrors();
-                loginErrorList[0].gameObject.SetActive(true);
-            }
+            errorUI.SetActive(true);
+            colorErrorUI = Color.HSVToRGB(0, 80, 100);
+            colorErrorUI.a = 0.9f;
+            imageErrorUI.color = colorErrorUI;
+            tMPErrorUI.text = registerTask.Exception.Message;
         }
         else
         {
@@ -168,7 +171,7 @@ public class AuthenticationManager : MonoBehaviour
         string username = "";
         FirebaseDatabase.DefaultInstance
         .GetReference("users/" + auth.CurrentUser.UserId + "/username")
-        .GetValueAsync().ContinueWithOnMainThread(task => {
+        .GetValueAsync().ContinueWith(task => {
             if (task.IsFaulted)
                 Debug.Log(task.Exception);
             else if (task.IsCompleted)
@@ -181,7 +184,6 @@ public class AuthenticationManager : MonoBehaviour
                 auth.CurrentUser.UserId);
 
                 username = (string)snapshot.Value;
-
             }
         });
     }
@@ -193,37 +195,18 @@ public class AuthenticationManager : MonoBehaviour
 
         yield return new WaitUntil(() => registerTask.IsCompleted);
 
+        errorUI.SetActive(false);
+
         if (registerTask.IsCanceled)
             Debug.LogError("CreateUserWithEmailAndPasswordAsync was canceled.");
         else if (registerTask.IsFaulted)
         {
             Debug.LogError("CreateUserWithEmailAndPasswordAsync encountered an error: " + registerTask.Exception.Message);
-
-            if (registerTask.Exception.Message == "One or more errors occurred. (The email address is already in use by another account.)")
-            {
-                DisableUIErrors();
-                signUpErrorList[1].gameObject.SetActive(true);
-            }
-            else if (registerTask.Exception.Message == "One or more errors occurred. (The email address is badly formatted.)")
-            {
-                DisableUIErrors();
-                loginErrorList[2].gameObject.SetActive(true);
-            }
-            else if (registerTask.Exception.Message == "One or more errors occurred. (An email address must be provided.)")
-            {
-                DisableUIErrors();
-                signUpErrorList[3].gameObject.SetActive(true);
-            }
-            else if (registerTask.Exception.Message == "One or more errors occurred. (The given password is invalid.)")
-            {
-                DisableUIErrors();
-                signUpErrorList[4].gameObject.SetActive(true);
-            }
-            else if (registerTask.Exception.Message == "One or more errors occurred. (A password must be provided.)")
-            {
-                DisableUIErrors();
-                signUpErrorList[5].gameObject.SetActive(true);
-            }
+            errorUI.SetActive(true);
+            colorErrorUI = Color.HSVToRGB(0, 80, 100);
+            colorErrorUI.a = 0.9f;
+            imageErrorUI.color = colorErrorUI;
+            tMPErrorUI.text = registerTask.Exception.Message;
         }
         else
         {
@@ -260,16 +243,26 @@ public class AuthenticationManager : MonoBehaviour
 
     private bool ValidUsername(string username)
     {
+        errorUI.SetActive(false);
+
         if (String.IsNullOrEmpty(username))
         {
-            DisableUIErrors();
-            signUpErrorList[6].gameObject.SetActive(true);
+            errorUI.SetActive(true);
+            colorErrorUI = Color.HSVToRGB(0, 80, 100);
+            colorErrorUI.a = 0.9f;
+            imageErrorUI.color = colorErrorUI;
+            tMPErrorUI.text = "One or more errors occurred. (An username must be provided.)";
+            
             return false;
         }
         if (String.IsNullOrWhiteSpace(username))
         {
-            DisableUIErrors();
-            signUpErrorList[6].gameObject.SetActive(true);
+            errorUI.SetActive(true);
+            colorErrorUI = Color.HSVToRGB(0, 80, 100);
+            colorErrorUI.a = 0.9f;
+            imageErrorUI.color = colorErrorUI;
+            tMPErrorUI.text = "One or more errors occurred. (Username has white Space.)";
+            
             return false;
         }
         else 
